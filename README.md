@@ -1,39 +1,60 @@
-# openGauss-connector-python
+### About
 
-#### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+py-opengauss is a Python 3 package providing modules for working with openGauss.  
+Primarily, a high-level driver for querying databases.
 
-#### 软件架构
-软件架构说明
+For a high performance async interface, MagicStack's asyncpg
+http://github.com/MagicStack/asyncpg should be considered.
 
+py-opengauss, currently, does not have direct support for high-level async
+interfaces provided by recent versions of Python. Future versions may change this.
 
-#### 安装教程
+### Advisory
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+In v1.3, `py_opengauss.driver.dbapi20.connect` will now raise `ClientCannotConnectError` directly.
+Exception traps around connect should still function, but the `__context__` attribute
+on the error instance will be `None` in the usual failure case as it is no longer
+incorrectly chained. Trapping `ClientCannotConnectError` ahead of `Error` should
+allow both cases to co-exist in the event that data is being extracted from
+the `ClientCannotConnectError`.
 
-#### 使用说明
+In v2.0, support for older versions of PostgreSQL and Python will be removed.  
+If you have automated installations using PyPI, make sure that they specify a major version.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+### Installation
 
-#### 参与贡献
+Using PyPI.org:
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+	$ pip install py-opengauss
 
+From a clone:
 
-#### 特技
+	$ git clone https://github.com/vimiix/py-opengauss.git
+	$ cd py-opengauss
+	$ python3 ./setup.py install # Or use in-place without installation(PYTHONPATH).
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+### Basic Usage
+
+> Support schemes: ['pq', 'postgres', 'postgresql', 'og', 'opengauss']
+
+```python
+import py_opengauss
+db = py_opengauss.open('opengauss://user:password@host:port/database')
+
+get_table = db.prepare("SELECT * from information_schema.tables WHERE table_name = $1")
+print(get_table("tables"))
+
+# Streaming, in a transaction.
+with db.xact():
+	for x in get_table.rows("tables"):
+		print(x)
+```
+
+### Documentation
+
+http://py-postgresql.readthedocs.io
+
+### Related
+
+- http://postgresql.org
+- http://python.org
