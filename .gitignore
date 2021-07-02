@@ -1,0 +1,6 @@
+build
+dist
+*.pyc
+.idea/
+.DS_Store
+py_opengauss.egg-info

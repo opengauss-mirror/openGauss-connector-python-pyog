@@ -1,0 +1,25 @@
+Contributors:
+ James William Pye [faults are mostly mine]
+ Elvis Pranskevichus
+ William Grzybowski [subjective paramstyle]
+ Barry Grussling [inet/cidr support]
+ Matthew Grant [inet/cidr support]
+
+Support by Donation:
+ AppCove Network
+
+Imported
+========
+
+DB-API 2.0 Test Case
+--------------------
+
+postgresql/test/test_dbapi20.py:
+ Stuart Bishop <zen@shangri-la.dropbear.id.au>
+
+
+fcrypt
+------
+
+postgresql/resolved/crypt.py:
+ Carey Evans <careye@spamcop.net>
