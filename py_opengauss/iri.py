@@ -26,69 +26,72 @@ del itemgetter
 import re
 escape_path_re = re.compile('[%s]' %(re.escape(ri.unescaped + ','),))
 
-def structure(d, fieldproc = ri.unescape):
+def structure(l, fieldproc = ri.unescape):
 	"""
 	Create a clientparams dictionary from a parsed RI.
 	"""
-	scheme = d.get('scheme', 'pq').lower()
-	if scheme not in {'pq', 'postgres', 'postgresql', 'og', 'opengauss'}:
-		raise ValueError("PQ-IRI scheme is not 'pq', 'postgres', 'postgresql', 'og' or 'opengauss'")
-	if scheme in {'og', 'opengauss'}:
-		# recover opengauss scheme to pq
-		d['scheme'] = 'pq'
+	res = []
+	for d in l:
+		scheme = d.get('scheme', 'pq').lower()
+		if scheme not in {'pq', 'postgres', 'postgresql', 'og', 'opengauss'}:
+			raise ValueError("PQ-IRI scheme is not 'pq', 'postgres', 'postgresql', 'og' or 'opengauss'")
+		if scheme in {'og', 'opengauss'}:
+			# recover opengauss scheme to pq
+			d['scheme'] = 'pq'
 
-	cpd = {
-		k : fieldproc(v) for k, v in d.items()
-		if k not in ('path', 'fragment', 'query', 'host', 'scheme')
-	}
+		cpd = {
+			k : fieldproc(v) for k, v in d.items()
+			if k not in ('path', 'fragment', 'query', 'host', 'scheme')
+		}
 
-	path = d.get('path')
-	frag = d.get('fragment')
-	query = d.get('query')
-	host = d.get('host')
+		path = d.get('path')
+		frag = d.get('fragment')
+		query = d.get('query')
+		host = d.get('host')
 
-	if host is not None:
-		if host.startswith('[') and host.endswith(']'):
-			host = host[1:-1]
-			if host.startswith('unix:'):
-				cpd['unix'] = host[len('unix:'):].replace(':','/')
+		if host is not None:
+			if host.startswith('[') and host.endswith(']'):
+				host = host[1:-1]
+				if host.startswith('unix:'):
+					cpd['unix'] = host[len('unix:'):].replace(':','/')
+				else:
+					cpd['host'] = host
 			else:
-				cpd['host'] = host
-		else:
-			cpd['host'] = fieldproc(host)
+				cpd['host'] = fieldproc(host)
 
-	if path:
-		# Only state the database field's existence if the first path is non-empty.
-		if path[0]:
-			cpd['database'] = path[0]
-		path = path[1:]
 		if path:
-			cpd['path'] = path
+			# Only state the database field's existence if the first path is non-empty.
+			if path[0]:
+				cpd['database'] = path[0]
+			path = path[1:]
+			if path:
+				cpd['path'] = path
 
-	settings = {}
-	if query:
-		if hasattr(query, 'items'):
-			qiter = query.items()
-		else:
-			qiter = query
-		for k, v in qiter:
-			if k.startswith('[') and k.endswith(']'):
-				k = k[1:-1]
-				if k != 'settings' and k not in cpd:
-					cpd[fieldproc(k)] = fieldproc(v)
-			elif k:
-				settings[fieldproc(k)] = fieldproc(v)
-			# else: ignore empty query keys
+		settings = {}
+		if query:
+			if hasattr(query, 'items'):
+				qiter = query.items()
+			else:
+				qiter = query
+			for k, v in qiter:
+				if k.startswith('[') and k.endswith(']'):
+					k = k[1:-1]
+					if k != 'settings' and k not in cpd:
+						cpd[fieldproc(k)] = fieldproc(v)
+				elif k:
+					settings[fieldproc(k)] = fieldproc(v)
+				# else: ignore empty query keys
 
-	if frag:
-		settings['search_path'] = [
-			fieldproc(x) for x in frag.split(',')
-		]
+		if frag:
+			settings['search_path'] = [
+				fieldproc(x) for x in frag.split(',')
+			]
 
-	if settings:
-		cpd['settings'] = settings
+		if settings:
+			cpd['settings'] = settings
+		res.append(cpd)
 
-	return cpd
+	return res
 
 def construct_path(x, re = escape_path_re):
 	"""
@@ -177,7 +180,7 @@ def construct(x, obscure_password = False):
 
 def parse(s, fieldproc = ri.unescape):
 	"""
-	Parse a Postgres IRI into a dictionary object.
+	Parse a Postgres IRI into a dictionary object list.
 	"""
 	return structure(
 		# In ri.parse, don't unescape the parsed values as our sub-structure

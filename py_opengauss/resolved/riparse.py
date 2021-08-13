@@ -39,6 +39,7 @@ within an RI's component as it can create ambiguity about a token when a
 percent encoded variant is decoded.
 """
 import re
+import copy
 
 pct_encode = '%%%0.2X'.__mod__
 unescaped = '%' + ''.join([chr(x) for x in range(0, 33)])
@@ -211,9 +212,34 @@ def unsplit(t):
 		s += t[4]
 	return s
 
+def split_ip(ip, fieldproc = unescape):
+	if ip[0] == '[':
+		# IPvN addr
+		next_pos = ip.find(']')
+		if next_pos == -1:
+			# unterminated IPvN block
+			next_pos = len(ip) - 1
+		addr = ip[:next_pos + 1]
+		pos = next_pos + 1
+		next_pos = addr.find(':', pos)
+		if next_pos == -1:
+			port = None
+		else:
+			port = fieldproc(addr[next_pos + 1:])
+	else:
+		next_pos = ip.find(':')
+		if next_pos == -1:
+			addr = fieldproc(ip)
+			port = None
+		else:
+			addr = fieldproc(ip[:next_pos])
+			port = fieldproc(ip[next_pos + 1:])
+	return addr, port
+
 def split_netloc(netloc, fieldproc = unescape):
 	"""
-	Split a net location into a 4-tuple, (user, password, host, port).
+	Split a net location into a 4-tuple list,
+	[(user, password, host, port), (user, password, host, port), ...].
 
 	Set `fieldproc` to `str` if the components' percent escapes should not be
 	decoded.
@@ -237,32 +263,23 @@ def split_netloc(netloc, fieldproc = unescape):
 		pos += 1
 
 	if pos >= len(netloc):
-		return (user, password, None, None)
+		return [(user, password, None, None)]
 
-	pos_chr = netloc[pos]
-	if pos_chr == '[':
-		# IPvN addr
-		next_pos = netloc.find(']', pos)
-		if next_pos == -1:
-			# unterminated IPvN block
-			next_pos = len(netloc) - 1
-		addr = netloc[pos:next_pos+1]
-		pos = next_pos + 1
-		next_pos = netloc.find(':', pos)
-		if next_pos == -1:
-			port = None
+	res = []
+	addr_start_pos = pos
+	keep_going = True
+	while keep_going:
+		next_comma_pos = netloc.find(',', addr_start_pos)
+		if next_comma_pos == -1:
+			addr_end_pos = len(netloc)
+			keep_going = False
 		else:
-			port = fieldproc(netloc[next_pos+1:])
-	else:
-		next_pos = netloc.find(':', pos)
-		if next_pos == -1:
-			addr = fieldproc(netloc[pos:])
-			port = None
-		else:
-			addr = fieldproc(netloc[pos:next_pos])
-			port = fieldproc(netloc[next_pos+1:])
-
-	return (user, password, addr, port)
+			addr_end_pos = next_comma_pos
+		addr, port = split_ip(netloc[addr_start_pos:addr_end_pos], fieldproc)
+		res.append((user, password, addr, port))
+		if keep_going:
+			addr_start_pos = next_comma_pos+1
+	return res
 
 def unsplit_netloc(t):
 	"""
@@ -288,7 +305,7 @@ def unsplit_netloc(t):
 
 def structure(t, fieldproc = unescape):
 	"""
-	Create a dictionary from a split RI(5-tuple).
+	Create a dictionary list from a split RI(5-tuple).
 
 	Set `fieldproc` to `str` if the components' percent escapes should not be
 	decoded.
@@ -297,17 +314,6 @@ def structure(t, fieldproc = unescape):
 
 	if t[0] is not None:
 		d['scheme'] = t[0]
-
-	if t[1] is not None:
-		uphp = split_netloc(t[1], fieldproc = fieldproc)
-		if uphp[0] is not None:
-			d['user'] = uphp[0]
-		if uphp[1] is not None:
-			d['password'] = uphp[1]
-		if uphp[2] is not None:
-			d['host'] = uphp[2]
-		if uphp[3] is not None:
-			d['port'] = uphp[3]
 
 	if t[2] is not None:
 		if t[2]:
@@ -324,7 +330,24 @@ def structure(t, fieldproc = unescape):
 
 	if t[4] is not None:
 		d['fragment'] = fieldproc(t[4])
-	return d
+
+	if t[1] is None:  # netloc
+		return [d]
+	else:
+		res = []
+		uphps = split_netloc(t[1], fieldproc = fieldproc)
+		for uphp in uphps:
+			tmpd = copy.deepcopy(d)
+			if uphp[0] is not None:
+				tmpd['user'] = uphp[0]
+			if uphp[1] is not None:
+				tmpd['password'] = uphp[1]
+			if uphp[2] is not None:
+				tmpd['host'] = uphp[2]
+			if uphp[3] is not None:
+				tmpd['port'] = uphp[3]
+			res.append(tmpd)
+		return res
 
 def construct_query(x,
 	key_re = escape_query_key_re,
@@ -374,7 +397,7 @@ def construct(x):
 
 def parse(s, fieldproc = unescape):
 	"""
-	Parse an RI into a dictionary object. Synonym for ``structure(split(x))``.
+	Parse an RI into a dictionary object list. Synonym for ``structure(split(x))``.
 
 	Set `fieldproc` to `str` if the components' percent escapes should not be
 	decoded.

@@ -13,6 +13,7 @@ from functools import partial
 import datetime
 import time
 import re
+from copy import deepcopy
 
 from .. import clientparameters as pg_param
 from .. import driver as pg_driver
@@ -401,6 +402,16 @@ class Connection(Connection):
 		self._xact = self.xact()
 		self._xact.start()
 
+
+# Check that the given connection is the primary instance
+def is_primary(c):
+	sql = "select local_role,db_state from pg_stat_get_stream_replications()"
+	r = c.prepare(sql)()
+	if r and r[0][0] in ('Primary', 'Normal') and r[0][1] == 'Normal':
+			return True
+	return False
+
+
 driver = pg_driver.Driver(connection = Connection)
 def connect(**kw):
 	"""
@@ -408,11 +419,51 @@ def connect(**kw):
 
 	Due to the way defaults are populated, when connecting to a local filesystem socket
 	using the `unix` keyword parameter, `host` and `port` must also be set to ``None``.
+
+	[新增] 如果上层是多host连接方式，比如：user:password@host1:123,host2:456/database
+	需在 kw 中通过 host 字段以多地址方式传入：
+		{ 'host': 'host1:123,host2:456'}
+	会返回角色为主库的 connect 对象
 	"""
+	kws = []
+	is_multi_host = False
+	if 'host' in kw:
+		addrs = kw.pop('host').split(',')
+		if len(addrs) > 1:
+			is_multi_host = True
+		for addr in addrs:
+			param = deepcopy(kw)
+			if ":" in addr:
+				host, str_port = addr.strip().split(':')
+				port = int(str_port)
+				param['host'] = host
+				param['port'] = port
+			else:
+				param['host'] = addr
+			kws.append(param)
+	else:
+		kws.append(kw)
+
 	std_params = pg_param.collect(prompt_title = None)
-	params = pg_param.normalize(
-		list(pg_param.denormalize_parameters(std_params)) + \
-		list(pg_param.denormalize_parameters(kw))
-	)
-	pg_param.resolve_password(params)
-	return driver.connect(**params)
+
+	errs = []
+	for kw in kws:
+		params = pg_param.normalize(
+			list(pg_param.denormalize_parameters(std_params)) + \
+			list(pg_param.denormalize_parameters(kw))
+		)
+		pg_param.resolve_password(params)
+		if not is_multi_host:
+			return driver.connect(**params)
+		else:
+			try:
+				c = driver.connect(**params)
+			except Exception as e:
+				errs.append({params.get('host'): e})
+				continue
+			if is_primary(c):
+				return c
+			else:
+				c.close()
+				errs.append({params.get('host'): "not primary instance"})
+	raise ConnectionError(errs)

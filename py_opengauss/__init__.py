@@ -33,6 +33,16 @@ try:
 except ImportError:
 	pass
 
+# Check that the given connection is the primary instance
+def is_primary(c):
+	sql = "SELECT local_role,db_state FROM pg_stat_get_stream_replications()"
+	r = c.prepare(sql)()
+	if r:
+		# 主备实例时角色为 Primary，单实例时为 Normal
+		if r[0][0] in ('Primary', 'Normal') and r[0][1] == 'Normal':
+			return True
+	return False
+
 # Avoid importing these until requested.
 _pg_iri = _pg_driver = _pg_param = None
 def open(iri = None, prompt_title = None, **kw):
@@ -46,6 +56,9 @@ def open(iri = None, prompt_title = None, **kw):
 
 		# Also support opengauss scheme:
 		>>> db = py_opengauss.open('opengauss://user:password@host:port/database')
+
+		# multi IP support:
+		>>> db = py_opengauss.open('opengauss://user:password@host1:123,host2:456/database')
 
 		# Connect to 'postgres' at localhost.
 		>>> db = py_opengauss.open('localhost/postgres')
@@ -70,29 +83,46 @@ def open(iri = None, prompt_title = None, **kw):
 			return_connector = True
 			iri = iri[1:]
 		iri_params = _pg_iri.parse(iri)
-		iri_params.pop('path', None)
+		[p.pop('path', None) for p in iri_params]
 	else:
-		iri_params = {}
+		iri_params = []
 
 	std_params = _pg_param.collect(prompt_title = None)
-	# If unix is specified, it's going to conflict with any standard
-	# settings, so remove them right here.
-	if 'unix' in kw or 'unix' in iri_params:
-		std_params.pop('host', None)
-		std_params.pop('port', None)
-	params = _pg_param.normalize(
-		list(_pg_param.denormalize_parameters(std_params)) + \
-		list(_pg_param.denormalize_parameters(iri_params)) + \
-		list(_pg_param.denormalize_parameters(kw))
-	)
-	_pg_param.resolve_password(params)
 
-	C = _pg_driver.default.fit(**params)
-	if return_connector is True:
-		return C
-	else:
+	# Traversal connect host for search primary
+	errs = []
+	for iri_param in iri_params:
+		# If unix is specified, it's going to conflict with any standard
+		# settings, so remove them right here.
+		if 'unix' in kw or 'unix' in iri_param:
+			std_params.pop('host', None)
+			std_params.pop('port', None)
+		params = _pg_param.normalize(
+			list(_pg_param.denormalize_parameters(std_params)) + \
+			list(_pg_param.denormalize_parameters(iri_param)) + \
+			list(_pg_param.denormalize_parameters(kw))
+		)
+		_pg_param.resolve_password(params)
+
+		C = _pg_driver.default.fit(**params)
 		c = C()
-		c.connect()
-		return c
+		if len(iri_params) == 1:
+			if return_connector:
+				return C
+			else:
+				c.connect()
+				return c
+		try:
+			c.connect()
+		except Exception as e:
+			errs.append({params.get('host'): e})
+			continue
+		if is_primary(c):
+			return C if return_connector is True else c
+		else:
+			c.close()
+			errs.append({params.get('host'): "not primary instance"})
+
+	raise ConnectionError(errs)
 
 __docformat__ = 'reStructuredText'
