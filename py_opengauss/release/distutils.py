@@ -21,21 +21,22 @@ except ImportError as e:
 LONG_DESCRIPTION = """
 This package is based on py-postgresql upgrades to work with openGauss.
 
-Forked Repo: http://github.com/vimiix/py-opengauss
+Repo: http://github.com/vimiix/py-opengauss
+Adapted from: http://github.com/python-postgres/fe v1.3.0
 
 .. warning::
-	In v1.3, `postgresql.driver.dbapi20.connect` will now raise `ClientCannotConnectError` directly.
+	In v1.3, `py_opengauss.driver.dbapi20.connect` will now raise `ClientCannotConnectError` directly.
 	Exception traps around connect should still function, but the `__context__` attribute
 	on the error instance will be `None` in the usual failure case as it is no longer
 	incorrectly chained. Trapping `ClientCannotConnectError` ahead of `Error` should
 	allow both cases to co-exist in the event that data is being extracted from
 	the `ClientCannotConnectError`.
 
-py-postgresql is a set of Python modules providing interfaces to various parts
-of PostgreSQL. Primarily, it provides a pure-Python driver with some C optimizations for
-querying a PostgreSQL database.
+py-opengauss is a set of Python modules providing interfaces to various parts
+of openGauss. Primarily, it provides a pure-Python driver with some C optimizations for
+querying a openGauss database.
 
-http://github.com/python-postgres/fe
+http://github.com/vimiix/py-opengauss
 
 Features:
 
@@ -43,11 +44,12 @@ Features:
  * Cluster tools for creating and controlling a cluster.
  * Support for most PostgreSQL types: composites, arrays, numeric, lots more.
  * COPY support.
+ * Multiple ip connect support
 
 Sample PG-API Code::
 
-	>>> import postgresql
-	>>> db = postgresql.open('pq://user:password@host:port/database')
+	>>> import py_opengauss
+	>>> db = py_opengauss.open('pq://user:password@host:port,host:port/database')
 	>>> db.execute("CREATE TABLE emp (emp_first_name text, emp_last_name text, emp_salary numeric)")
 	>>> make_emp = db.prepare("INSERT INTO emp VALUES ($1, $2, $3)")
 	>>> make_emp("John", "Doe", "75,322")
@@ -58,13 +60,13 @@ Sample PG-API Code::
 
 There is a DB-API 2.0 module as well::
 
-	postgresql.driver.dbapi20
+	py_opengauss.driver.dbapi20
 
 However, PG-API is recommended as it provides greater utility.
 
 Once installed, try out the ``pg_python`` console script::
 
-	$ python3 -m postgresql.bin.pg_python -h localhost -p port -U theuser -d database_name
+	$ python3 -m py_opengauss.bin.pg_python -h localhost -p port -U theuser -d database_name
 
 If a successful connection is made to the remote host, it will provide a Python
 console with the database connection bound to the `db` name.
@@ -174,8 +176,8 @@ def standard_setup_keywords(build_extensions = True, prefix = default_prefix):
 		'long_description_content_type' : 'text/x-rst',
 		'author' : 'James William Pye',
 		'author_email' : 'james.pye@gmail.com',
-		'maintainer' : 'James William Pye',
-		'maintainer_email' : 'james.pye@gmail.com',
+		'maintainer' : 'Vimiix',
+		'maintainer_email' : 'i@vimiix.com',
 		'url' : url,
 		'classifiers' : CLASSIFIERS,
 		'packages' : list(prefixed_packages(prefix = prefix)),
