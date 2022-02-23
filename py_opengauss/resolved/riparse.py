@@ -133,21 +133,25 @@ def split(s):
 
 	end_of_netloc = end
 
-	path_pos = s.find('/', pos)
-	if path_pos == -1:
+	split_loc = s.rfind('@')
+	if split_loc == -1:
+		return scheme, netloc, path, query, fragment
+
+	path_pos = s.rfind('/', pos)
+	if path_pos == -1 or path_pos < split_loc:
 		path_pos = None
 	else:
 		end_of_netloc = path_pos
 
-	query_pos = s.find('?', pos)
-	if query_pos == -1:
+	query_pos = s.rfind('?', pos)
+	if query_pos == -1 or query_pos < split_loc:
 		query_pos = None
 	elif path_pos is None or query_pos < path_pos:
 		path_pos = None
 		end_of_netloc = query_pos
 
-	fragment_pos = s.find('#', pos)
-	if fragment_pos == -1:
+	fragment_pos = s.rfind('#', pos)
+	if fragment_pos == -1 or fragment_pos < split_loc:
 		fragment_pos = None
 	else:
 		if query_pos is not None and fragment_pos < query_pos:
@@ -244,7 +248,7 @@ def split_netloc(netloc, fieldproc = unescape):
 	Set `fieldproc` to `str` if the components' percent escapes should not be
 	decoded.
 	"""
-	pos = netloc.find('@')
+	pos = netloc.rfind('@')
 	if pos == -1:
 		# No user information
 		pos = 0

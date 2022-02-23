@@ -32,7 +32,8 @@
 # multi IP support, will return PRIMARY instance connect:
 >>> db = py_opengauss.open('opengauss://user:password@host1:123,host2:456/database')
 
-# Connect to 'postgres' at localhost.
+# Connect to 'postgres' at localhost with default user and password in the env, which only support postgresql.
+# 注意: 该连接方式只支持PG, 不支持openGauss, 对于openGauss, 必须要输入user和password
 >>> db = py_opengauss.open('localhost/postgres')
 ```
 
