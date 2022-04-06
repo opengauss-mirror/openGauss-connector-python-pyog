@@ -40,6 +40,7 @@ percent encoded variant is decoded.
 """
 import re
 import copy
+from urllib.parse import quote
 
 pct_encode = '%%%0.2X'.__mod__
 unescaped = '%' + ''.join([chr(x) for x in range(0, 33)])
@@ -131,11 +132,18 @@ def split(s):
 				scheme = None
 				break
 
-	end_of_netloc = end
+	split_loc = s.rfind('@', pos)
+	if split_loc != -1:
+		# quote password to a safe string
+		userpw = s[pos:split_loc].split(':', 1)
+		if len(userpw) == 2:
+			user, pw = userpw
+			safe_pw = quote(pw)
+			s = s[:pos] + user + ':' + safe_pw + s[split_loc:]
+			# update end pos from new string
+			end = len(s)
 
-	split_loc = s.rfind('@')
-	if split_loc == -1:
-		return scheme, netloc, path, query, fragment
+	end_of_netloc = end
 
 	path_pos = s.rfind('/', pos)
 	if path_pos == -1 or path_pos < split_loc:
