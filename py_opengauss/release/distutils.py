@@ -21,7 +21,7 @@ except ImportError as e:
 LONG_DESCRIPTION = """
 This package is based on py-postgresql upgrades to work with openGauss.
 
-Repo: http://github.com/vimiix/py-opengauss
+Repo: https://gitee.com/opengauss/openGauss-connector-python-pyog
 Adapted from: http://github.com/python-postgres/fe v1.3.0
 
 .. warning::
@@ -36,7 +36,7 @@ py-opengauss is a set of Python modules providing interfaces to various parts
 of openGauss. Primarily, it provides a pure-Python driver with some C optimizations for
 querying a openGauss database.
 
-http://github.com/vimiix/py-opengauss
+https://gitee.com/opengauss/openGauss-connector-python-pyog
 
 Features:
 

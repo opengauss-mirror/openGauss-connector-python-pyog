@@ -13,9 +13,9 @@
     
 通过源码安装：
 
-	$ git clone https://github.com/vimiix/py-opengauss.git
-	$ cd py-opengauss
-	$ python3 setup.py install
+    $ git clone https://gitee.com/opengauss/openGauss-connector-python-pyog.git
+    $ cd py-opengauss
+    $ python3 setup.py install
 
 ### 连接方式：
 
@@ -48,8 +48,8 @@ print(get_table("tables"))
 
 # Streaming, in a transaction.
 with db.xact():
-	for x in get_table.rows("tables"):
-		print(x)
+    for x in get_table.rows("tables"):
+        print(x)
 ```
 
 ### sqlalchemy 多IP连接用法

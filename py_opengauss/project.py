@@ -3,7 +3,7 @@ Project information.
 """
 
 name = 'py-opengauss'
-identity = 'http://github.com/vimiix/py-opengauss'
+identity = 'https://gitee.com/opengauss/openGauss-connector-python-pyog'
 
 meaculpa = 'Python+openGauss'
 abstract = 'Driver and tools library for openGauss'
