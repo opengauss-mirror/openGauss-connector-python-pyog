@@ -165,11 +165,27 @@ class TypeIO(pg_api.TypeIO):
 		r = self.database.sys.lookup_basetype_recursive(typid)
 		return r[0][0]
 
+	def _encode_latin1(self, string_data):
+		# support all unicode
+		return string_data.encode('utf8'), len(string_data)
+
+	def _decode_latin1(self, bytes_data):
+		# support all unicode
+		n = len(bytes_data)
+		try:
+			return bytes_data.decode('utf8'), n
+		except:
+			return bytes_data.decode('latin1'), n
+
 	def set_encoding(self, value):
 		"""
 		Set a new client encoding.
 		"""
 		self.encoding = value.lower().strip()
+		if self.encoding in ("latin1", "latin-1"):
+			self._encode = self._encode_latin1
+			self._decode =  self._decode_latin1
+			return
 		enc = get_python_name(self.encoding)
 		ci = lookup_codecs(enc or self.encoding)
 		self._encode, self._decode, *_ = ci
