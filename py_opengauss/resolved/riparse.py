@@ -225,28 +225,28 @@ def unsplit(t):
 	return s
 
 def split_ip(ip, fieldproc = unescape):
-	if ip[0] == '[':
-		# IPvN addr
-		next_pos = ip.find(']')
-		if next_pos == -1:
-			# unterminated IPvN block
-			next_pos = len(ip) - 1
-		addr = ip[:next_pos + 1]
-		pos = next_pos + 1
-		next_pos = addr.find(':', pos)
-		if next_pos == -1:
-			port = None
-		else:
-			port = fieldproc(addr[next_pos + 1:])
-	else:
-		next_pos = ip.find(':')
-		if next_pos == -1:
-			addr = fieldproc(ip)
-			port = None
-		else:
-			addr = fieldproc(ip[:next_pos])
-			port = fieldproc(ip[next_pos + 1:])
-	return addr, port
+    if ip[0] == '[':
+        # IPvN addr
+        next_pos = ip.find(']')
+        if next_pos == -1:
+            # unterminated IPvN block
+            next_pos = len(ip) - 1
+        addr = ip[:next_pos + 1]
+        pos = next_pos + 1
+        next_pos = ip.find(':', pos)
+        if next_pos == -1:
+            port = None
+        else:
+            port = fieldproc(ip[next_pos + 1:])
+    else:
+        next_pos = ip.rfind(':')
+        if next_pos == -1:
+            addr = fieldproc(ip)
+            port = None
+        else:
+            addr = fieldproc(ip[:next_pos])
+            port = fieldproc(ip[next_pos + 1:])
+    return addr, port
 
 def split_netloc(netloc, fieldproc = unescape):
 	"""

@@ -434,10 +434,11 @@ def connect(**kw):
 		for addr in addrs:
 			param = deepcopy(kw)
 			if ":" in addr:
-				host, str_port = addr.strip().split(':')
-				port = int(str_port)
-				param['host'] = host
-				param['port'] = port
+				parts = addr.strip().rsplit(":", 1)
+                host, str_port = parts
+                port = int(str_port)
+                param['host'] = host
+                param['port'] = port
 			else:
 				param['host'] = addr
 			kws.append(param)
