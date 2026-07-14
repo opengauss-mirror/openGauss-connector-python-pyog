@@ -14,6 +14,8 @@ from ..protocol import xact3 as x3
 from ..protocol import client3 as c3
 from ..protocol import buffer as pq_buf
 from ..python.socket import find_available_port, SocketFactory
+from .. import driver as pg_driver
+from .. import exceptions as pg_exc
 
 def pair(msg):
 	return (msg.type, msg.serialize())
@@ -590,6 +592,58 @@ class test_xact3(unittest.TestCase):
 		self.assertTrue(isinstance(v, Nee))
 
 class test_client3(unittest.TestCase):
+	def test_ssl_prefer_falls_back_after_handshake_failure(self):
+		portnum = find_available_port()
+		servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		servsock.settimeout(5)
+		servsock.bind(('127.0.0.1', portnum))
+		servsock.listen(2)
+		requests = []
+		server_errors = []
+
+		def server_thread():
+			try:
+				c, addr = servsock.accept()
+				with c:
+					c.settimeout(5)
+					requests.append(c.recv(1024))
+					# Claim SSL support, then send non-TLS bytes to reproduce
+					# ssl.SSLError: WRONG_VERSION_NUMBER.
+					c.sendall(b'S' + (b'0' * 22))
+					c.recv(1024)
+
+				c, addr = servsock.accept()
+				with c:
+					c.settimeout(5)
+					requests.append(c.recv(1024))
+			except Exception as err:
+				server_errors.append(err)
+
+		server = Thread(target = server_thread)
+		server.start()
+		try:
+			with self.assertRaises(pg_exc.ClientCannotConnectError) as err:
+				pg_driver.connect(
+					user = 'test',
+					password = 'test',
+					database = 'test',
+					host = '127.0.0.1',
+					port = portnum,
+					sslmode = 'prefer',
+				)
+		finally:
+			server.join(5)
+			servsock.close()
+
+		self.assertFalse(server.is_alive())
+		self.assertEqual(server_errors, [])
+		self.assertEqual(len(requests), 2)
+		self.assertEqual(requests[0], e3.NegotiateSSLMessage.bytes())
+		self.assertNotEqual(requests[1], e3.NegotiateSSLMessage.bytes())
+		self.assertEqual(len(err.exception.database.failures), 2)
+		self.assertTrue(err.exception.database.failures[0].ssl_negotiation)
+		self.assertFalse(hasattr(err.exception.database.failures[1], 'ssl_negotiation'))
+
 	def test_timeout(self):
 		portnum = find_available_port()
 		servsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

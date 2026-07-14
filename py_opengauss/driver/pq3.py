@@ -2524,7 +2524,8 @@ class Connection(pg_api.Connection):
 			neg = pq.xact
 			pq.connect(ssl = ssl, timeout = timeout)
 
-			didssl = getattr(pq, 'ssl_negotiation', -1)
+			ssl_negotiation_attempted = hasattr(pq, 'ssl_negotiation')
+			didssl = pq.ssl_negotiation if ssl_negotiation_attempted else None
 
 			# It successfully connected if pq.xact is None;
 			# The startup/negotiation xact completed.
@@ -2553,9 +2554,11 @@ class Connection(pg_api.Connection):
 				# a failure.
 				can_skip = True
 			elif hasattr(pq.xact, 'exception'):
-				# If a Python exception occurred, chances are that it is
-				# going to fail again iff it is going to hit the same host.
-				if sslmode == 'prefer' and ssl is False:
+				# Socket creation and connection failures occur before SSL
+				# negotiation and will fail again against the same host.
+				# Once SSL negotiation has started, however, "prefer" must
+				# still retry without SSL if the handshake raises an exception.
+				if sslmode == 'prefer' and ssl is False and not ssl_negotiation_attempted:
 					# when 'prefer', the first attempt
 					# is marked with ssl is "False"
 					can_skip = True
