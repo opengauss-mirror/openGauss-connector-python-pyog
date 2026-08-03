@@ -112,7 +112,7 @@ class Negotiation(Transaction):
 
 	def __repr__(self):
 		s = type(self).__module__ + "." + type(self).__name__
-		s += pprint.pformat((self.startup_message, self.password)).lstrip()
+		s += pprint.pformat((self.startup_message, "<redacted>")).lstrip()
 		return s
 
 	def messages_received(self):
