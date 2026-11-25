@@ -1,0 +1,26 @@
+project: opengauss/openGauss-connector-python-pyog
+version: '1.0'
+directories:
+- path: ./py_opengauss/bin/
+  type: upstream
+- path: ./py_opengauss/encodings/
+  type: upstream
+- path: ./py_opengauss/lib/
+  type: upstream
+- path: ./py_opengauss/port/
+  type: upstream
+- path: ./py_opengauss/python/
+  type: upstream
+- path: ./py_opengauss/types/
+  type: upstream
+- path: ./py_opengauss/documentation/
+  type: docs
+- path: ./py_opengauss/release/
+  type: packaging
+- path: ./py_opengauss/test/
+  type: test
+files:
+- path: ./LICENSE
+  type: license
+- path: ./.gitcode/copyright-template.txt
+  type: copyright-template
