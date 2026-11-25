@@ -1,6 +1,13 @@
 project: opengauss/openGauss-connector-python-pyog
 version: '1.0'
 directories:
+# Root-level Python code is the inherited setup.py packaging entry point.
+- path: ./
+  type: packaging
+# Upstream and adapted modules are mixed in this component.
+# Existing upstream and Huawei notices are preserved.
+- path: ./py_opengauss/
+  type: upstream
 - path: ./py_opengauss/bin/
   type: upstream
 - path: ./py_opengauss/encodings/
